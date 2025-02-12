@@ -89,6 +89,7 @@ class Employee:
     def move_to(self, destination):
         """Move step-by-step towards destination and log path."""
         while self.position != list(destination):
+            pygame.event.pump()  # Allow Pygame to process events
             if self.position[0] < destination[0]:
                 self.position[0] += 1
             elif self.position[0] > destination[0]:
@@ -98,10 +99,11 @@ class Employee:
             elif self.position[1] > destination[1]:
                 self.position[1] -= 1
             self.path.append(tuple(self.position))
-            draw_grid(self.path)
+            draw_grid(self.path, self.position)
+            clock.tick(10)
 
 # Draw the warehouse grid and employee movement
-def draw_grid(path):
+def draw_grid(path, employee_position):
     screen.fill((0, 0, 0))  # Black background
     for r in range(rows):
         for c in range(cols):
@@ -112,8 +114,10 @@ def draw_grid(path):
     for step in path:
         pygame.draw.rect(screen, (0, 255, 0), (step[1] * CELL_SIZE, step[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
     
+    # Draw employee as a blue square
+    pygame.draw.rect(screen, (0, 0, 255), (employee_position[1] * CELL_SIZE, employee_position[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    
     pygame.display.flip()
-    clock.tick(10)
 
 # Run a single test visualization
 warehouse = populate_warehouse(layout_rules_current)
