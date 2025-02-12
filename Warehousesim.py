@@ -1,6 +1,7 @@
-# Define categories and genders
 import random
+import pygame
 
+# Define categories and genders
 categories = ["Lifestyle", "RoadRunners", "TrailRunners", "LowHikers", "MidHikers"]
 genders = ["Men", "Women"]
 
@@ -21,22 +22,8 @@ layout_rules_current = [
     {"range": range(33, 38), "category": "MidHikers", "gender": "Men"}
 ]
 
-# Define layout rules for alternate layout
-layout_rules_alternate = [
-    {"range": range(0, 7), "category": "Lifestyle", "gender": "Men"},
-    {"range": range(7, 14), "category": "RoadRunners", "gender": "Men"},
-    {"range": range(14, 21), "category": "TrailRunners", "gender": "Men"},
-    {"range": range(21, 28), "category": "LowHikers", "gender": "Men"},
-    {"range": range(28, 35), "category": "MidHikers", "gender": "Men"},
-    {"range": range(0, 7), "category": "MidHikers", "gender": "Women"},
-    {"range": range(7, 14), "category": "LowHikers", "gender": "Women"},
-    {"range": range(14, 21), "category": "TrailRunners", "gender": "Women"},
-    {"range": range(21, 28), "category": "RoadRunners", "gender": "Women"},
-    {"range": range(28, 35), "category": "Lifestyle", "gender": "Women"}
-]
-
-# Function to populate the warehouse grid
-def populate_warehouse(layout_rules, sales_weights=None):
+# Define function to populate warehouse
+def populate_warehouse(layout_rules):
     warehouse = []
     for r in range(rows):
         row = []
@@ -51,28 +38,38 @@ def populate_warehouse(layout_rules, sales_weights=None):
                 "type": category,
                 "gender": gender,
                 "bay": r * cols + c + 1,
-                "weight": sales_weights.get(category, 1) if sales_weights else 1,
                 "requires_ladder": c > 2
             }
             row.append(bay)
         warehouse.append(row)
     return warehouse
 
-# Define an Employee class
+# Pygame Visualization Setup
+CELL_SIZE = 20
+SCREEN_WIDTH = cols * CELL_SIZE
+SCREEN_HEIGHT = rows * CELL_SIZE
+
+pygame.init()
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+clock = pygame.time.Clock()
+
+# Employee Class with Movement Visualization
 class Employee:
     def __init__(self, name, warehouse):
         self.name = name
-        self.capacity = 4  # Maximum number of boxes the employee can carry
-        self.current_load = []  # Current boxes the employee is holding
-        self.trips = 0  # Number of trips made
+        self.capacity = 4
+        self.current_load = []
+        self.trips = 0
         self.warehouse = warehouse
+        self.position = list(entry_points[0])  # Start at the first entry point
+        self.path = []
 
     def fetch_footwear(self, footwear_list):
         self.trips = 0
         for footwear in footwear_list:
             position = self.find_footwear(footwear)
             if position is not None:
-                row, col = position
+                self.move_to(position)
                 if len(self.current_load) < self.capacity:
                     self.current_load.append(footwear)
                 else:
@@ -83,59 +80,52 @@ class Employee:
         return self.trips
 
     def find_footwear(self, footwear):
-        min_distance = float('inf')
-        best_position = None
         for r, row in enumerate(self.warehouse):
             for c, bay in enumerate(row):
                 if bay["type"] == footwear:
-                    for entry_index, entry in enumerate(entry_points):
-                        distance = abs(entry[0] - r) + abs(entry[1] - c)
-                        if entry_index == 0:  # Apply 15% penalty for Entry Point 0
-                            distance *= 1.15
-                        if bay["requires_ladder"]:
-                            distance += 5  # Penalty for using a ladder
-                        if distance < min_distance:
-                            min_distance = distance
-                            best_position = (r, c)
-        # If no exact match is found, assume a default position (e.g., first bay)
-        if best_position is None:
-            best_position = (0, 0)
-        return best_position
+                    return (r, c)
+        return None
 
-# Simulate employee workflow and compare layouts
-def simulate_and_compare(num_simulations=10000):
-    random.seed(42)  # Set a fixed seed for consistent results
-    sales_weights = {
-        "Lifestyle": 3,
-        "RoadRunners": 5,
-        "TrailRunners": 4,
-        "LowHikers": 2,
-        "MidHikers": 1
-    }
+    def move_to(self, destination):
+        """Move step-by-step towards destination and log path."""
+        while self.position != list(destination):
+            if self.position[0] < destination[0]:
+                self.position[0] += 1
+            elif self.position[0] > destination[0]:
+                self.position[0] -= 1
+            if self.position[1] < destination[1]:
+                self.position[1] += 1
+            elif self.position[1] > destination[1]:
+                self.position[1] -= 1
+            self.path.append(tuple(self.position))
+            draw_grid(self.path)
 
-    total_trips_current = 0
-    total_trips_alternate = 0
+# Draw the warehouse grid and employee movement
+def draw_grid(path):
+    screen.fill((0, 0, 0))  # Black background
+    for r in range(rows):
+        for c in range(cols):
+            rect = pygame.Rect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+            pygame.draw.rect(screen, (50, 50, 50), rect, 1)
+    
+    # Draw employee path
+    for step in path:
+        pygame.draw.rect(screen, (0, 255, 0), (step[1] * CELL_SIZE, step[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    
+    pygame.display.flip()
+    clock.tick(10)
 
-    for sim in range(num_simulations):
-        footwear_list = [random.choice(categories) for _ in range(10)]  # Randomized footwear list
+# Run a single test visualization
+warehouse = populate_warehouse(layout_rules_current)
+employee = Employee("John", warehouse)
+footwear_list = [random.choice(categories) for _ in range(5)]
+employee.fetch_footwear(footwear_list)
 
-        # Simulate current layout
-        warehouse_current = populate_warehouse(layout_rules_current, sales_weights)
-        employee_current = Employee("John", warehouse_current)
-        trips_current = employee_current.fetch_footwear(footwear_list)
-        total_trips_current += trips_current
+# Main loop to keep Pygame running
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-        # Simulate alternate layout
-        warehouse_alternate = populate_warehouse(layout_rules_alternate, sales_weights)
-        employee_alternate = Employee("John", warehouse_alternate)
-        trips_alternate = employee_alternate.fetch_footwear(footwear_list)
-        total_trips_alternate += trips_alternate
-
-    avg_trips_current = total_trips_current / num_simulations
-    avg_trips_alternate = total_trips_alternate / num_simulations
-
-    print(f"Average trips for current layout: {avg_trips_current:.2f}")
-    print(f"Average trips for alternate layout: {avg_trips_alternate:.2f}")
-
-# Execute the simulation for 10,000 runs
-simulate_and_compare(10000)
+pygame.quit()
