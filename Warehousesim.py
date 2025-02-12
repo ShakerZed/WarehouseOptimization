@@ -119,17 +119,19 @@ def draw_grid(path, employee_position):
     
     pygame.display.flip()
 
-# Run a single test visualization
+# Run continuous client requests
 warehouse = populate_warehouse(layout_rules_current)
 employee = Employee("John", warehouse)
-footwear_list = [random.choice(categories) for _ in range(5)]
-employee.fetch_footwear(footwear_list)
 
-# Main loop to keep Pygame running
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
+    
+    # Generate a new client request every few frames
+    if random.random() < 0.02:  # 2% chance per frame to get a new request
+        footwear_list = [random.choice(categories) for _ in range(random.randint(1, 4))]
+        employee.fetch_footwear(footwear_list)
+    
 pygame.quit()
