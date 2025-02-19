@@ -23,6 +23,7 @@ layout_rules_current = [
 ]
 
 # Function to populate the warehouse based on predefined layout rules
+
 def populate_warehouse(layout_rules):
     warehouse = []
     for r in range(rows):  # Iterate over each row
@@ -74,9 +75,11 @@ class Employee:
                 self.move_to(position)  # Move to the footwear's bay
                 if len(self.current_load) < self.capacity:
                     self.current_load.append(footwear)  # Pick up footwear
+                    print(f"Employee {self.name} picked up {footwear}. Current load: {self.current_load}")
                 else:
                     self.trips += 1
                     self.current_load = [footwear]  # Start a new load
+                    print(f"Employee {self.name} exceeded capacity, new trip started. Current load: {self.current_load}")
         if self.current_load:
             self.trips += 1
         return self.trips
