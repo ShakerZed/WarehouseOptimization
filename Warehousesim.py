@@ -8,6 +8,7 @@ genders = ["Men", "Women"]
 # Initialize warehouse dimensions
 rows, cols = 35, 5  # Warehouse has 35 rows and 5 columns
 entry_points = [(0, 1), (rows - 1, 1)]  # Employee starts at the second column for accurate movement
+exit_points = [(0, 1), (rows - 1, 1)]  # Employee exits through the same entry points
 
 # Define layout rules for the current warehouse setup
 layout_rules_current = [
@@ -23,7 +24,6 @@ layout_rules_current = [
 ]
 
 # Function to populate the warehouse based on predefined layout rules
-
 def populate_warehouse(layout_rules):
     warehouse = []
     for r in range(rows):  # Iterate over each row
@@ -68,6 +68,7 @@ class Employee:
 
     def fetch_footwear(self, footwear_list):
         """Processes a footwear request by moving to the correct location and picking up items."""
+        print(f"New client request: {footwear_list}")
         self.trips = 0
         for footwear in footwear_list:
             position = self.find_footwear(footwear)
@@ -77,11 +78,12 @@ class Employee:
                     self.current_load.append(footwear)  # Pick up footwear
                     print(f"Employee {self.name} picked up {footwear}. Current load: {self.current_load}")
                 else:
-                    self.trips += 1
+                    print(f"Employee {self.name} full. Exiting warehouse to deload.")
+                    self.exit_warehouse()
                     self.current_load = [footwear]  # Start a new load
-                    print(f"Employee {self.name} exceeded capacity, new trip started. Current load: {self.current_load}")
+                    print(f"Employee {self.name} re-entering warehouse. Current load: {self.current_load}")
         if self.current_load:
-            self.trips += 1
+            self.exit_warehouse()  # Ensure employee exits after final collection
         return self.trips
 
     def find_footwear(self, footwear):
@@ -96,8 +98,7 @@ class Employee:
         """Moves the employee step-by-step to the target bay, entering from column 1."""
         target_row, _ = destination
         target_col = 0  # Always enter from column 1
-
-        # Move vertically first towards the correct row
+        
         while self.position[0] != target_row:
             pygame.event.pump()
             if self.position[0] < target_row:
@@ -107,8 +108,7 @@ class Employee:
             self.path.append(tuple(self.position))
             draw_grid(self.path, self.position, len(self.current_load))
             clock.tick(10)
-
-        # Move horizontally into the bay (always from column 1)
+        
         while self.position[1] != target_col:
             pygame.event.pump()
             self.position[1] -= 1
@@ -116,26 +116,20 @@ class Employee:
             draw_grid(self.path, self.position, len(self.current_load))
             clock.tick(10)
 
-# Draw the warehouse grid and visualize employee movement
-def draw_grid(path, employee_position, load_count):
-    screen.fill((0, 0, 0))  # Black background
-    for r in range(rows):
-        for c in range(cols):
-            rect = pygame.Rect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-            pygame.draw.rect(screen, (50, 50, 50), rect, 1)  # Draw warehouse bays
-    
-    # Highlight the employee's movement path in green
-    for step in path:
-        pygame.draw.rect(screen, (0, 255, 0), (step[1] * CELL_SIZE, step[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-    
-    # Draw the employee as a blue square at the current position
-    pygame.draw.rect(screen, (0, 0, 255), (employee_position[1] * CELL_SIZE, employee_position[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-    
-    # Display the number of footwear boxes the employee is carrying
-    text_surface = font.render(str(load_count), True, (255, 255, 255))
-    screen.blit(text_surface, (employee_position[1] * CELL_SIZE + 5, employee_position[0] * CELL_SIZE + 5))
-    
-    pygame.display.flip()
+    def exit_warehouse(self):
+        """Moves the employee to the nearest exit point to deload before re-entering."""
+        exit_row, exit_col = exit_points[0]  # Default to first exit point
+        
+        while self.position[0] != exit_row:
+            pygame.event.pump()
+            if self.position[0] < exit_row:
+                self.position[0] += 1
+            elif self.position[0] > exit_row:
+                self.position[0] -= 1
+            self.path.append(tuple(self.position))
+            draw_grid(self.path, self.position, 0)
+            clock.tick(10)
+        print(f"Employee {self.name} has exited and deloaded.")
 
 # Initialize warehouse and employee
 warehouse = populate_warehouse(layout_rules_current)
@@ -148,18 +142,6 @@ while running:
         if event.type == pygame.QUIT:
             running = False
     
-    # Generate a new client request every few frames (random event trigger)
-    if random.random() < 0.02:  # 2% chance per frame to get a new request
-        footwear_list = [random.choice(categories) for _ in range(random.randint(1, 4))]
-        # Print out the client's new footwear request before fetching
-        print(f"New client request: {footwear_list}")
-        employee.fetch_footwear(footwear_list)
-
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-    
-    # Generate a new client request every few frames (random event trigger)
     if random.random() < 0.02:  # 2% chance per frame to get a new request
         footwear_list = [random.choice(categories) for _ in range(random.randint(1, 4))]
         employee.fetch_footwear(footwear_list)
