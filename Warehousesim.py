@@ -151,6 +151,17 @@ while running:
     # Generate a new client request every few frames (random event trigger)
     if random.random() < 0.02:  # 2% chance per frame to get a new request
         footwear_list = [random.choice(categories) for _ in range(random.randint(1, 4))]
+        # Print out the client's new footwear request before fetching
+        print(f"New client request: {footwear_list}")
+        employee.fetch_footwear(footwear_list)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+    
+    # Generate a new client request every few frames (random event trigger)
+    if random.random() < 0.02:  # 2% chance per frame to get a new request
+        footwear_list = [random.choice(categories) for _ in range(random.randint(1, 4))]
         employee.fetch_footwear(footwear_list)
     
 pygame.quit()
